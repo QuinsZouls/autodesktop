@@ -16,6 +16,8 @@ pub struct GridConfig {
     pub show_labels: bool,
     /// Font size for labels (default: 14)
     pub label_size: f32,
+    /// Scale factor for converting pixels to logical coordinates (macOS Retina)
+    pub scale_factor: f32,
 }
 
 impl Default for GridConfig {
@@ -30,6 +32,7 @@ impl Default for GridConfig {
             opacity: 0.6,
             show_labels: false,
             label_size: 14.0,
+            scale_factor: 1.0,
         }
     }
 }
@@ -149,7 +152,7 @@ pub fn apply_grid(mut image: DynamicImage, config: &GridConfig) -> DynamicImage 
     DynamicImage::ImageRgba8(image.to_rgba8())
 }
 
-/// Draw coordinate labels at grid edges
+/// Draw coordinate labels at grid edges (shows LOGICAL coordinates)
 fn draw_coordinate_labels(
     mut image: DynamicImage,
     config: &GridConfig,
@@ -157,6 +160,7 @@ fn draw_coordinate_labels(
 ) -> DynamicImage {
     let width = image.width();
     let height = image.height();
+    let scale = config.scale_factor;
 
     // Background color for label boxes
     let bg_color = Rgba([0, 0, 0, 180]);
@@ -165,23 +169,25 @@ fn draw_coordinate_labels(
     let char_w = 6u32; // 5px char + 1px spacing
     let char_h = 9u32; // 8px char + 1px spacing
 
-    // X-axis labels along the top edge
-    let mut x = config.spacing;
-    while x < width {
-        let label = format!("{}", x);
+    // X-axis labels along the top edge (show logical coordinates)
+    let mut pixel_x = config.spacing;
+    while pixel_x < width {
+        // Convert pixel to logical coordinate
+        let logical_x = (pixel_x as f32 / scale) as i32;
+        let label = format!("{}", logical_x);
         let label_w = (label.len() as u32 * char_w) + 4; // padding
         let label_h = char_h + 2;
 
         // Background box
         draw_filled_rect_mut(
             &mut image,
-            Rect::at(x as i32 - (label_w as i32 / 2), 1)
+            Rect::at(pixel_x as i32 - (label_w as i32 / 2), 1)
                 .of_size(label_w, label_h),
             bg_color,
         );
 
         // Draw digits
-        let mut char_x = x as i32 - ((label.len() as i32 * char_w as i32) / 2) + 2;
+        let mut char_x = pixel_x as i32 - ((label.len() as i32 * char_w as i32) / 2) + 2;
         for ch in label.chars() {
             if ch.is_ascii_digit() {
                 draw_digit(&mut image, char_x, 3, ch, *label_color);
@@ -189,20 +195,22 @@ fn draw_coordinate_labels(
             char_x += char_w as i32;
         }
 
-        x += config.spacing;
+        pixel_x += config.spacing;
     }
 
-    // Y-axis labels along the left edge
-    let mut y = config.spacing;
-    while y < height {
-        let label = format!("{}", y);
+    // Y-axis labels along the left edge (show logical coordinates)
+    let mut pixel_y = config.spacing;
+    while pixel_y < height {
+        // Convert pixel to logical coordinate
+        let logical_y = (pixel_y as f32 / scale) as i32;
+        let label = format!("{}", logical_y);
         let label_w = (label.len() as u32 * char_w) + 4;
         let label_h = char_h + 2;
 
         // Background box
         draw_filled_rect_mut(
             &mut image,
-            Rect::at(1, y as i32 - (label_h as i32 / 2))
+            Rect::at(1, pixel_y as i32 - (label_h as i32 / 2))
                 .of_size(label_w, label_h),
             bg_color,
         );
@@ -211,12 +219,12 @@ fn draw_coordinate_labels(
         let mut char_x = 3;
         for ch in label.chars() {
             if ch.is_ascii_digit() {
-                draw_digit(&mut image, char_x, y as i32 - 3, ch, *label_color);
+                draw_digit(&mut image, char_x, pixel_y as i32 - 3, ch, *label_color);
             }
             char_x += char_w as i32;
         }
 
-        y += config.spacing;
+        pixel_y += config.spacing;
     }
 
     image

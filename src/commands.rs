@@ -100,6 +100,7 @@ impl CaptureArgs {
             opacity: self.grid_opacity.clamp(0.0, 1.0),
             show_labels,
             label_size: self.label_size.max(8.0).min(48.0),
+            scale_factor: 1.0, // Will be updated in capture_with_grid
         })
     }
 
@@ -128,12 +129,18 @@ impl CaptureArgs {
 /// Mouse subcommands
 #[derive(Subcommand, Debug)]
 pub enum MouseCommands {
-    /// Move cursor to absolute position
+    /// Move cursor to position (smooth by default)
     Move {
         /// X coordinate
         x: i32,
         /// Y coordinate
         y: i32,
+        /// Disable smooth movement (instant)
+        #[arg(short, long, default_value = "false")]
+        instant: bool,
+        /// Duration in milliseconds for smooth movement (default: 500)
+        #[arg(short, long, default_value = "500")]
+        duration: u32,
     },
     /// Click mouse button at current position
     Click {
@@ -141,7 +148,7 @@ pub enum MouseCommands {
         #[arg(default_value = "left")]
         button: String,
     },
-    /// Click at specific coordinates
+    /// Click at specific coordinates (smooth movement by default)
     #[command(name = "click-at")]
     ClickAt {
         /// X coordinate
@@ -151,6 +158,9 @@ pub enum MouseCommands {
         /// Mouse button (left, right, middle)
         #[arg(default_value = "left")]
         button: String,
+        /// Disable smooth movement (instant)
+        #[arg(short, long, default_value = "false")]
+        instant: bool,
     },
     /// Double click at coordinates
     #[command(name = "double-click")]
@@ -163,7 +173,7 @@ pub enum MouseCommands {
         #[arg(default_value = "left")]
         button: String,
     },
-    /// Drag from one point to another
+    /// Drag from one point to another (smooth by default)
     Drag {
         /// Start X
         x1: i32,
@@ -176,6 +186,9 @@ pub enum MouseCommands {
         /// Mouse button (left, right, middle)
         #[arg(default_value = "left")]
         button: String,
+        /// Disable smooth movement (instant)
+        #[arg(short, long, default_value = "false")]
+        instant: bool,
     },
     /// Scroll the mouse wheel
     Scroll {
@@ -191,21 +204,33 @@ pub enum MouseCommands {
 /// Keyboard subcommands
 #[derive(Subcommand, Debug)]
 pub enum KeyboardCommands {
-    /// Type text
+    /// Type text (human-like timing by default)
     #[command(name = "type")]
     TypeText {
         /// Text to type
         text: String,
+        /// Disable human-like timing (instant)
+        #[arg(short, long, default_value = "false")]
+        instant: bool,
+        /// Speed level: 1 (slow) to 10 (fast) for human typing
+        #[arg(short, long, default_value = "5")]
+        speed: u8,
     },
-    /// Press a single key
+    /// Press a single key (human-like timing by default)
     Key {
         /// Key name (enter, esc, tab, space, ctrl, alt, cmd, up, down, left, right, f1-f12, etc.)
         key: String,
+        /// Disable human-like timing (instant)
+        #[arg(short, long, default_value = "false")]
+        instant: bool,
     },
-    /// Press a key combination (e.g., "Ctrl+C", "Alt+Tab", "Cmd+Shift+4")
+    /// Press a key combination (human-like timing by default)
     Combo {
         /// Combination string (e.g., "Ctrl+C")
         combo: String,
+        /// Disable human-like timing (instant)
+        #[arg(short, long, default_value = "false")]
+        instant: bool,
     },
 }
 

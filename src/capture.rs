@@ -92,8 +92,12 @@ pub fn capture_with_grid(
         None => capture_monitor(monitor_index)?,
     };
 
+    // Apply grid with scale factor for correct logical coordinate labels
     let mut image = match grid_config {
-        Some(config) => apply_grid(image, &config),
+        Some(mut config) => {
+            config.scale_factor = scale_factor;
+            apply_grid(image, &config)
+        }
         None => image,
     };
 

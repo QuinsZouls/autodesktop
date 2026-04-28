@@ -29,6 +29,9 @@ fn cmd_capture(args: &commands::CaptureArgs) -> Result<(), String> {
     let grid_config = args.grid_config();
     let show_mouse = args.show_mouse && !args.no_grid; // Only show mouse if grid is enabled
 
+    // Get mouse position before capture
+    let mouse_pos = input::get_mouse_position();
+
     println!("Capturing screenshot...");
 
     let image = capture::capture_with_grid(
@@ -53,6 +56,11 @@ fn cmd_capture(args: &commands::CaptureArgs) -> Result<(), String> {
     println!("Screenshot saved to: {}", args.output);
     println!("  Resolution: {}x{} px", width, height);
     println!("  File size: {:.1} KB", file_size_kb);
+
+    // Show mouse position
+    if let Ok((mx, my)) = mouse_pos {
+        println!("  Mouse position: ({}, {})", mx, my);
+    }
 
     if !args.no_grid {
         let spacing = args.grid;
@@ -82,29 +90,44 @@ fn cmd_mouse(cmd: &MouseCommands) -> Result<(), String> {
     let mut mouse = input::MouseController::new()?;
 
     match cmd {
-        MouseCommands::Move { x, y } => {
-            mouse.move_to(*x, *y)?;
-            println!("Mouse moved to ({}, {})", x, y);
+        MouseCommands::Move { x, y, instant, duration } => {
+            if *instant {
+                mouse.move_to(*x, *y)?;
+                println!("Mouse moved to ({}, {}) [instant]", x, y);
+            } else {
+                mouse.move_to_smooth(*x, *y, *duration)?;
+                println!("Mouse moved smoothly to ({}, {}) in {}ms", x, y, duration);
+            }
         }
         MouseCommands::Click { button } => {
             let btn = commands::parse_mouse_button(button)?;
             mouse.click(btn)?;
             println!("{} click at current position", button);
         }
-        MouseCommands::ClickAt { x, y, button } => {
+        MouseCommands::ClickAt { x, y, button, instant } => {
             let btn = commands::parse_mouse_button(button)?;
-            mouse.click_at(*x, *y, btn)?;
-            println!("{} click at ({}, {})", button, x, y);
+            if *instant {
+                mouse.click_at(*x, *y, btn)?;
+                println!("{} click at ({}, {}) [instant]", button, x, y);
+            } else {
+                mouse.click_at_smooth(*x, *y, btn)?;
+                println!("{} click at ({}, {}) [smooth]", button, x, y);
+            }
         }
         MouseCommands::DoubleClick { x, y, button } => {
             let btn = commands::parse_mouse_button(button)?;
             mouse.double_click_at(*x, *y, btn)?;
             println!("Double {} click at ({}, {})", button, x, y);
         }
-        MouseCommands::Drag { x1, y1, x2, y2, button } => {
+        MouseCommands::Drag { x1, y1, x2, y2, button, instant } => {
             let btn = commands::parse_mouse_button(button)?;
-            mouse.drag(*x1, *y1, *x2, *y2, btn)?;
-            println!("Drag from ({}, {}) to ({}, {})", x1, y1, x2, y2);
+            if *instant {
+                mouse.drag(*x1, *y1, *x2, *y2, btn)?;
+                println!("Drag from ({}, {}) to ({}, {}) [instant]", x1, y1, x2, y2);
+            } else {
+                mouse.drag_smooth(*x1, *y1, *x2, *y2, btn)?;
+                println!("Drag from ({}, {}) to ({}, {}) [smooth]", x1, y1, x2, y2);
+            }
         }
         MouseCommands::Scroll { x, y } => {
             mouse.scroll(*x, *y)?;
@@ -120,19 +143,34 @@ fn cmd_keyboard(cmd: &KeyboardCommands) -> Result<(), String> {
     let mut keyboard = input::KeyboardController::new()?;
 
     match cmd {
-        KeyboardCommands::TypeText { text } => {
-            keyboard.type_text(text)?;
-            println!("Typed: {}", text);
+        KeyboardCommands::TypeText { text, instant, speed } => {
+            if *instant {
+                keyboard.type_text(text)?;
+                println!("Typed: {} [instant]", text);
+            } else {
+                keyboard.type_at_speed(text, *speed)?;
+                println!("Typed (human speed {}): {}", speed, text);
+            }
         }
-        KeyboardCommands::Key { key } => {
+        KeyboardCommands::Key { key, instant } => {
             let key_enum = input::parse_key(key)?;
-            keyboard.key(key_enum)?;
-            println!("Pressed key: {}", key);
+            if *instant {
+                keyboard.key(key_enum)?;
+                println!("Pressed key: {} [instant]", key);
+            } else {
+                keyboard.key_human(key_enum)?;
+                println!("Pressed key: {} [human]", key);
+            }
         }
-        KeyboardCommands::Combo { combo } => {
+        KeyboardCommands::Combo { combo, instant } => {
             let (modifiers, key) = input::parse_combo(combo)?;
-            keyboard.combo(&modifiers, key)?;
-            println!("Combo: {}", combo);
+            if *instant {
+                keyboard.combo(&modifiers, key)?;
+                println!("Combo: {} [instant]", combo);
+            } else {
+                keyboard.combo_human(&modifiers, key)?;
+                println!("Combo: {} [human]", combo);
+            }
         }
     }
 
